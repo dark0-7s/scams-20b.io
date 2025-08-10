@@ -31,6 +31,9 @@ const App = () => (
           {/* Login page */}
           <Route path="/login" element={<Login />} />
 
+          {/* Forgot password page */}
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+
           {/* Dashboard routes with layout */}
           <Route
             path="/dashboard"
