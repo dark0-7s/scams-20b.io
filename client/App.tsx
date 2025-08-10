@@ -24,8 +24,55 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          {/* Redirect root to login */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+
+          {/* Login page */}
+          <Route path="/login" element={<Login />} />
+
+          {/* Dashboard routes with layout */}
+          <Route
+            path="/dashboard"
+            element={
+              <DashboardLayout>
+                <Dashboard />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/attendance"
+            element={
+              <DashboardLayout>
+                <Attendance />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/resources"
+            element={
+              <DashboardLayout>
+                <Resources />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/announcements"
+            element={
+              <DashboardLayout>
+                <Announcements />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <DashboardLayout>
+                <Settings />
+              </DashboardLayout>
+            }
+          />
+
+          {/* 404 page */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
