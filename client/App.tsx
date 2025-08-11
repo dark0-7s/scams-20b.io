@@ -86,6 +86,14 @@ const App = () => (
               </DashboardLayout>
             }
           />
+          <Route
+            path="/analytics"
+            element={
+              <DashboardLayout>
+                <Analytics />
+              </DashboardLayout>
+            }
+          />
 
           {/* 404 page */}
           <Route path="*" element={<NotFound />} />
