@@ -11,6 +11,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 interface TopNavProps {
   onToggleSidebar?: () => void;
