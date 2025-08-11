@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { TopNav } from "./TopNav";
 import { SideNav } from "./SideNav";
+import { FeedbackButton } from "@/components/feedback/FeedbackButton";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
