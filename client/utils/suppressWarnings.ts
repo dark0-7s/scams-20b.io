@@ -1,32 +1,37 @@
 // Suppress React defaultProps warnings from third-party libraries in development
 if (process.env.NODE_ENV === 'development') {
   const originalWarn = console.warn;
+  const originalError = console.error;
 
-  console.warn = (...args) => {
-    // Handle React's warning format with string interpolation
-    const message = args[0];
-    const additionalArgs = args.slice(1);
+  // Suppression function for both warn and error
+  const suppressDefaultPropsWarnings = (originalFn: any) => (...args: any[]) => {
+    // Convert all arguments to strings for analysis
+    const allArgsAsString = args.map(arg => String(arg)).join(' ');
 
-    // Check if this is a React defaultProps warning
-    if (
-      typeof message === 'string' &&
-      (message.includes('Support for defaultProps will be removed from function components') ||
-       message.includes('%s: Support for defaultProps will be removed'))
-    ) {
-      return;
+    // Comprehensive patterns to catch all defaultProps warnings
+    const isDefaultPropsWarning =
+      allArgsAsString.includes('Support for defaultProps will be removed from function components') ||
+      allArgsAsString.includes('defaultProps will be removed') ||
+      (allArgsAsString.includes('defaultProps') &&
+       (allArgsAsString.includes('XAxis') ||
+        allArgsAsString.includes('YAxis') ||
+        allArgsAsString.includes('Chart') ||
+        allArgsAsString.includes('recharts'))) ||
+      // Catch React's interpolated format
+      (typeof args[0] === 'string' &&
+       args[0].includes('%s') &&
+       args[0].includes('defaultProps') &&
+       args.some((arg: any) => typeof arg === 'string' &&
+         (arg === 'XAxis' || arg === 'YAxis' || arg.includes('Axis'))));
+
+    if (isDefaultPropsWarning) {
+      return; // Suppress the warning
     }
 
-    // Also check additional arguments for component names like XAxis, YAxis
-    const fullMessage = typeof message === 'string' ? message : '';
-    const hasRechartsComponent = additionalArgs.some(arg =>
-      typeof arg === 'string' && (arg === 'XAxis' || arg === 'YAxis' || arg.includes('Chart'))
-    );
-
-    if (fullMessage.includes('defaultProps') && hasRechartsComponent) {
-      return;
-    }
-
-    // Allow all other warnings through
-    originalWarn.apply(console, args);
+    // Allow all other warnings/errors through
+    originalFn.apply(console, args);
   };
+
+  console.warn = suppressDefaultPropsWarnings(originalWarn);
+  console.error = suppressDefaultPropsWarnings(originalError);
 }
