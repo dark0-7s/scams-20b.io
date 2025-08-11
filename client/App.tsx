@@ -14,6 +14,7 @@ import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
 import Attendance from "./pages/Attendance";
+import Timetable from "./pages/Timetable";
 import Resources from "./pages/Resources";
 import Announcements from "./pages/Announcements";
 import Settings from "./pages/Settings";
