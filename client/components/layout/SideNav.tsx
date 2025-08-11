@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   Calendar,
+  CalendarDays,
   BookOpen,
   Megaphone,
   BarChart3,
