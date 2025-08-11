@@ -29,6 +29,11 @@ const navigation = [
     icon: Calendar,
   },
   {
+    name: "Timetable",
+    href: "/timetable",
+    icon: CalendarDays,
+  },
+  {
     name: "Resources",
     href: "/resources",
     icon: BookOpen,
