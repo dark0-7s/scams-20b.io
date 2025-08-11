@@ -5,6 +5,7 @@ import {
   Calendar,
   BookOpen,
   Megaphone,
+  BarChart3,
   Settings,
   X,
 } from "lucide-react";
