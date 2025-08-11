@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,11 +10,22 @@ import { Mail, Lock, Fingerprint } from "lucide-react";
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const { login, user, isLoading } = useAuth();
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Redirect if already logged in
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log("Login attempt", { email, password });
+    setError("");
+
+    const success = await login(email, password);
+    if (!success) {
+      setError("Invalid email or password. Try: admin@university.edu, dept.cs@university.edu, lecturer@university.edu, or student@university.edu with password 'password'");
+    }
   };
 
   const handleFingerprintLogin = () => {
@@ -75,8 +87,14 @@ export default function Login() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full">
-                Login
+              {error && (
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+                  <p className="text-sm text-destructive">{error}</p>
+                </div>
+              )}
+
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Signing in..." : "Login"}
               </Button>
             </form>
 
