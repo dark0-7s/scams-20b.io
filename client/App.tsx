@@ -65,6 +65,14 @@ const App = () => (
             }
           />
           <Route
+            path="/timetable"
+            element={
+              <DashboardLayout>
+                <Timetable />
+              </DashboardLayout>
+            }
+          />
+          <Route
             path="/resources"
             element={
               <DashboardLayout>
