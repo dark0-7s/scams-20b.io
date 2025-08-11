@@ -43,6 +43,9 @@ export function TopNav({ onToggleSidebar }: TopNavProps) {
         {/* Spacer */}
         <div className="flex-1" />
 
+        {/* Theme Toggle */}
+        <ThemeToggle />
+
         {/* Notifications */}
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
