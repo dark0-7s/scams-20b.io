@@ -16,6 +16,8 @@ import Announcements from "./pages/Announcements";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
+import { ProtectedRoute } from "./components/layout/ProtectedRoute";
+import RoleBasedDashboard from "./components/layout/RoleBasedDashboard";
 
 const queryClient = new QueryClient();
 
