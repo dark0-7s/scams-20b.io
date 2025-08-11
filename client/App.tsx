@@ -16,6 +16,7 @@ import Attendance from "./pages/Attendance";
 import Resources from "./pages/Resources";
 import Announcements from "./pages/Announcements";
 import Settings from "./pages/Settings";
+import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { ProtectedRoute } from "./components/layout/ProtectedRoute";
