@@ -26,13 +26,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main content */}
       <div className="flex flex-1 flex-col min-w-0">
         <TopNav onToggleSidebar={toggleSidebar} />
-        
+
         <main className="flex-1 overflow-auto">
           <div className="p-6">
             {children}
           </div>
         </main>
       </div>
+
+      {/* Floating Feedback Button */}
+      <FeedbackButton />
     </div>
   );
 }
