@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -24,8 +24,11 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import { listSessions, startSession, stopSession, openAttendanceStream, ingestAttendance, exportCsv } from "@/lib/scams";
+import type { AttendanceRecord, Session, SessionMode } from "@shared/api";
 
-// Mock attendance data
+// Mock attendance data (historical)
 const attendanceRecords = [
   { date: "2024-01-15", subject: "Data Structures", status: "present", time: "09:15 AM", method: "biometric" },
   { date: "2024-01-15", subject: "Database Lab", status: "present", time: "02:30 PM", method: "bluetooth" },
@@ -37,8 +40,15 @@ const attendanceRecords = [
 
 const subjects = ["All Subjects", "Data Structures", "Algorithms", "Database Lab", "Computer Networks", "Software Engineering"];
 
+const timetable = [
+  { id: 'tt1', subject: 'Data Structures', teacherId: '3', room: 'A-101', startTime: Date.now(), endTime: Date.now()+3600000 },
+  { id: 'tt2', subject: 'Algorithms', teacherId: '3', room: 'A-202', startTime: Date.now()+7200000, endTime: Date.now()+10800000 },
+];
+
 export default function Attendance() {
   const { user } = useAuth();
+  const { toast } = useToast();
+
   const [selectedSubject, setSelectedSubject] = useState("All Subjects");
   const [dateFrom, setDateFrom] = useState<Date>();
   const [dateTo, setDateTo] = useState<Date>();
@@ -46,37 +56,102 @@ export default function Attendance() {
   const [attendanceMethod, setAttendanceMethod] = useState<'biometric' | 'bluetooth' | 'manual'>('biometric');
   const [scanningStatus, setScanningStatus] = useState<'idle' | 'scanning' | 'success' | 'failed'>('idle');
 
-  const handleMarkAttendance = () => {
+  // Live session state (teacher/coordinator)
+  const [mode, setMode] = useState<SessionMode>('ble');
+  const [selectedTimetable, setSelectedTimetable] = useState<string>(timetable[0]?.id ?? '');
+  const [activeSession, setActiveSession] = useState<Session | null>(null);
+  const [liveRecords, setLiveRecords] = useState<AttendanceRecord[]>([]);
+  const unsubscribeRef = useRef<null | (() => void)>(null);
+
+  useEffect(() => {
+    if (user && user.role !== 'student') {
+      listSessions().then(s => {
+        const active = s.find(x => x.active);
+        if (active) {
+          setActiveSession(active);
+          subscribe(active.id);
+        }
+      }).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  function subscribe(id: string) {
+    unsubscribeRef.current?.();
+    const off = openAttendanceStream(id, (u) => {
+      if (u.type === 'attendance') setLiveRecords(prev => [u.data, ...prev]);
+    });
+    unsubscribeRef.current = off;
+  }
+
+  async function handleStartSession() {
+    try {
+      const sess = await startSession(selectedTimetable, mode);
+      setActiveSession(sess);
+      setLiveRecords([]);
+      subscribe(sess.id);
+      toast({ title: 'Session started', description: `${sess.mode.toUpperCase()} session is live.` });
+    } catch (e) {
+      toast({ title: 'Unable to start session', description: 'Check schedule/overlap.', variant: 'destructive' });
+    }
+  }
+
+  async function handleStopSession() {
+    if (!activeSession) return;
+    try {
+      const sess = await stopSession(activeSession.id);
+      setActiveSession(sess);
+      unsubscribeRef.current?.();
+      toast({ title: 'Session stopped' });
+    } catch (e) {
+      toast({ title: 'Failed to stop session', variant: 'destructive' });
+    }
+  }
+
+  async function handleStudentMark() {
     setIsMarkingAttendance(true);
     setScanningStatus('scanning');
+    try {
+      const sessions = await listSessions();
+      const online = sessions.find(s => s.active && s.mode === 'online');
+      if (!online) throw new Error('No active online session');
+      const record = await ingestAttendance({
+        sessionId: online.id,
+        userId: user!.id,
+        method: 'online',
+        timestamp: Date.now(),
+        metadata: { source: 'client' }
+      });
+      setScanningStatus('success');
+      toast({ title: 'Attendance recorded', description: `Time: ${new Date(record.timestamp).toLocaleTimeString()}` });
+    } catch (e: any) {
+      setScanningStatus('failed');
+      toast({ title: 'Could not mark attendance', description: e?.message ?? 'Try again later', variant: 'destructive' });
+    } finally {
+      setTimeout(() => { setIsMarkingAttendance(false); setScanningStatus('idle'); }, 1500);
+    }
+  }
 
-    // Simulate attendance marking process
-    setTimeout(() => {
-      const success = Math.random() > 0.1; // 90% success rate
-      setScanningStatus(success ? 'success' : 'failed');
-
-      setTimeout(() => {
-        setIsMarkingAttendance(false);
-        setScanningStatus('idle');
-      }, 2000);
-    }, 3000);
-  };
+  function downloadCsv(rows: AttendanceRecord[]) {
+    const csv = exportCsv(rows);
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'attendance.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   const filteredRecords = attendanceRecords.filter(record => {
-    if (selectedSubject !== "All Subjects" && record.subject !== selectedSubject) {
-      return false;
-    }
+    if (selectedSubject !== "All Subjects" && record.subject !== selectedSubject) return false;
+    if (dateFrom && new Date(record.date) < dateFrom) return false;
+    if (dateTo && new Date(record.date) > dateTo) return false;
     return true;
   });
 
-  const getStatusColor = (status: string) => {
-    return status === 'present' ? 'text-green-600' : 'text-red-600';
-  };
-
-  const getStatusIcon = (status: string) => {
-    return status === 'present' ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />;
-  };
-
+  const getStatusColor = (status: string) => status === 'present' ? 'text-green-600' : 'text-red-600';
+  const getStatusIcon = (status: string) => status === 'present' ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />;
   const getMethodIcon = (method: string) => {
     switch (method) {
       case 'biometric': return <Fingerprint className="h-4 w-4 text-blue-600" />;
@@ -85,6 +160,8 @@ export default function Attendance() {
       default: return null;
     }
   };
+
+  const presentCount = liveRecords.length;
 
   return (
     <div className="space-y-6">
@@ -97,7 +174,7 @@ export default function Attendance() {
           </p>
         </div>
         {user?.role === 'student' && (
-          <Button onClick={handleMarkAttendance} disabled={isMarkingAttendance}>
+          <Button onClick={handleStudentMark} disabled={isMarkingAttendance}>
             <Fingerprint className="w-4 h-4 mr-2" />
             {isMarkingAttendance ? 'Marking...' : 'Mark Attendance'}
           </Button>
@@ -107,6 +184,7 @@ export default function Attendance() {
       <Tabs defaultValue="records" className="space-y-4">
         <TabsList>
           <TabsTrigger value="records">Attendance Records</TabsTrigger>
+          {user && user.role !== 'student' && <TabsTrigger value="live">Live Session</TabsTrigger>}
           {user?.role !== 'student' && <TabsTrigger value="mark">Mark Attendance</TabsTrigger>}
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
@@ -166,7 +244,16 @@ export default function Attendance() {
               </div>
 
               <div className="flex items-end">
-                <Button variant="outline">
+                <Button variant="outline" onClick={() => {
+                  const rows: AttendanceRecord[] = filteredRecords.map((r, i) => ({
+                    id: String(i+1),
+                    sessionId: 'history',
+                    userId: user?.id || 'user',
+                    method: (r.method === 'biometric' ? 'ble' : r.method === 'bluetooth' ? 'ble' : 'manual') as any,
+                    timestamp: new Date(r.date + ' ' + (r.time === '-' ? '00:00' : r.time)).getTime(),
+                  }));
+                  downloadCsv(rows);
+                }}>
                   <Download className="w-4 h-4 mr-2" />
                   Export
                 </Button>
@@ -220,6 +307,88 @@ export default function Attendance() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {user?.role !== 'student' && (
+          <TabsContent value="live" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Session Controls</CardTitle>
+                <CardDescription>Start/stop sessions and monitor live attendance</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Timetable</label>
+                    <Select value={selectedTimetable} onValueChange={setSelectedTimetable}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select class" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {timetable.map(tt => (
+                          <SelectItem key={tt.id} value={tt.id}>{tt.subject} • {tt.room}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Mode</label>
+                    <Select value={mode} onValueChange={(v) => setMode(v as SessionMode)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ble">On-Campus BLE</SelectItem>
+                        <SelectItem value="online">Online (WebRTC)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-end gap-2">
+                    {!activeSession?.active && (
+                      <Button className="w-full" onClick={handleStartSession}>Start Session</Button>
+                    )}
+                    {activeSession?.active && (
+                      <Button variant="destructive" className="w-full" onClick={handleStopSession}>Stop Session</Button>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="text-sm text-muted-foreground">Session: {activeSession ? activeSession.id : 'None'}</div>
+                    <Button variant="outline" size="sm" onClick={() => downloadCsv(liveRecords)}>
+                      <Download className="w-4 h-4 mr-2" /> Export CSV
+                    </Button>
+                  </div>
+                  <div className="overflow-x-auto border rounded-md">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-3">Student</th>
+                          <th className="text-left p-3">Time</th>
+                          <th className="text-left p-3">Method</th>
+                          <th className="text-left p-3">Source</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {liveRecords.map(r => (
+                          <tr key={r.id} className="border-b">
+                            <td className="p-3">{r.userId}</td>
+                            <td className="p-3">{new Date(r.timestamp).toLocaleTimeString()}</td>
+                            <td className="p-3 capitalize">{r.method}</td>
+                            <td className="p-3 capitalize text-xs text-muted-foreground">{r.metadata?.source ?? ''}</td>
+                          </tr>
+                        ))}
+                        {liveRecords.length === 0 && (
+                          <tr><td className="p-4 text-sm text-muted-foreground" colSpan={4}>No attendance yet.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         {user?.role !== 'student' && (
           <TabsContent value="mark" className="space-y-4">
@@ -312,12 +481,12 @@ export default function Attendance() {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Present Students</span>
-                      <span className="font-medium">32/45</span>
+                      <span className="font-medium">{presentCount}</span>
                     </div>
-                    <Progress value={71} />
+                    <Progress value={presentCount % 100} />
                   </div>
 
-                  <Button className="w-full" onClick={handleMarkAttendance}>
+                  <Button className="w-full" onClick={handleStopSession} disabled={!activeSession?.active}>
                     <CheckCircle className="w-4 h-4 mr-2" />
                     Complete Attendance
                   </Button>
