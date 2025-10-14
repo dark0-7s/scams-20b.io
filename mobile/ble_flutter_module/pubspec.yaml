@@ -1,10 +1,10 @@
 name: scams_ble_advertiser
 description: SCAMS BLE advertiser module for broadcasting authenticated attendance packets.
 version: 0.1.0
-publish_to: 'none'
+publish_to: "none"
 
 environment:
-  sdk: '>=2.17.0 <4.0.0'
+  sdk: ">=2.17.0 <4.0.0"
 
 dependencies:
   flutter:
