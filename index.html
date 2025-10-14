@@ -9,6 +9,51 @@
   <body>
     <div id="root"></div>
 
+    <script>
+      (function(){
+        if (typeof window === 'undefined' || typeof console === 'undefined') return;
+        try {
+          const originalWarn = console.warn.bind(console);
+          const originalError = console.error.bind(console);
+          const DEFAULT_RE = /defaultProps will be removed|Support for defaultProps will be removed/i;
+          const COMPONENTS = ['XAxis','YAxis','Chart','Axis','recharts'];
+
+          function containsComponent(args){
+            for (let i=0;i<args.length;i++){
+              const a = args[i];
+              if (typeof a !== 'string') continue;
+              for (let j=0;j<COMPONENTS.length;j++){
+                if (a.indexOf(COMPONENTS[j]) !== -1) return true;
+              }
+            }
+            return false;
+          }
+
+          function argsToString(args){
+            try{
+              return Array.prototype.map.call(args, function(a){
+                return typeof a === 'string' ? a : JSON.stringify(a);
+              }).join(' ');
+            }catch(e){
+              return String(args);
+            }
+          }
+
+          function shouldSuppress(args){
+            const joined = argsToString(args);
+            if (!DEFAULT_RE.test(joined)) return false;
+            if (containsComponent(args)) return true;
+            // handle interpolated React warnings where %s is used
+            if (typeof args[0] === 'string' && args[0].indexOf('%s') !== -1 && DEFAULT_RE.test(joined) && containsComponent(args)) return true;
+            return false;
+          }
+
+          console.warn = function(){ if (shouldSuppress(arguments)) return; return originalWarn.apply(console, arguments); };
+          console.error = function(){ if (shouldSuppress(arguments)) return; return originalError.apply(console, arguments); };
+        }catch(e){ /* fail quietly */ }
+      })();
+    </script>
+
     <script type="module" src="/client/App.tsx"></script>
   </body>
 </html>
