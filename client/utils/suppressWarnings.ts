@@ -1,37 +1,63 @@
-// Suppress React defaultProps warnings from third-party libraries in development
-if (process.env.NODE_ENV === 'development') {
-  const originalWarn = console.warn;
-  const originalError = console.error;
+// Suppress specific React "defaultProps will be removed" warnings coming from third-party
+// libraries (notably Recharts). We keep the suppression conservative so other warnings/errors
+// still surface. Disabled for test environment so unit tests can assert warnings if needed.
+if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') {
+  const originalWarn = console.warn.bind(console);
+  const originalError = console.error.bind(console);
 
-  // Suppression function for both warn and error
-  const suppressDefaultPropsWarnings = (originalFn: any) => (...args: any[]) => {
-    // Convert all arguments to strings for analysis
-    const allArgsAsString = args.map(arg => String(arg)).join(' ');
+  const DEFAULT_PROPS_REGEX = /defaultProps will be removed|Support for defaultProps will be removed|Support for defaultProps/i;
+  const RECHARTS_COMPONENTS = ['XAxis', 'YAxis', 'Chart', 'Axis', 'recharts'];
 
-    // Comprehensive patterns to catch all defaultProps warnings
-    const isDefaultPropsWarning =
-      allArgsAsString.includes('Support for defaultProps will be removed from function components') ||
-      allArgsAsString.includes('defaultProps will be removed') ||
-      (allArgsAsString.includes('defaultProps') &&
-       (allArgsAsString.includes('XAxis') ||
-        allArgsAsString.includes('YAxis') ||
-        allArgsAsString.includes('Chart') ||
-        allArgsAsString.includes('recharts'))) ||
-      // Catch React's interpolated format
-      (typeof args[0] === 'string' &&
-       args[0].includes('%s') &&
-       args[0].includes('defaultProps') &&
-       args.some((arg: any) => typeof arg === 'string' &&
-         (arg === 'XAxis' || arg === 'YAxis' || arg.includes('Axis'))));
-
-    if (isDefaultPropsWarning) {
-      return; // Suppress the warning
+  function argsToString(args: any[]) {
+    try {
+      return args.map((a) => {
+        if (typeof a === 'string') return a;
+        try {
+          return JSON.stringify(a);
+        } catch {
+          return String(a);
+        }
+      }).join(' ');
+    } catch {
+      return String(args);
     }
+  }
 
-    // Allow all other warnings/errors through
-    originalFn.apply(console, args);
-  };
+  function containsRechartsComponent(args: any[]) {
+    return args.some((arg) => {
+      if (typeof arg !== 'string') return false;
+      return RECHARTS_COMPONENTS.some((c) => arg.includes(c));
+    });
+  }
 
-  console.warn = suppressDefaultPropsWarnings(originalWarn);
-  console.error = suppressDefaultPropsWarnings(originalError);
+  function isInterpolatedDefaultPropsWarning(args: any[]) {
+    // React may emit a format string like: "%s: Support for defaultProps will be removed...%s",
+    // followed by component name(s) as separate args. Detect that case.
+    if (typeof args[0] !== 'string') return false;
+    if (!/%s/.test(args[0])) return false;
+    const joined = argsToString(args);
+    return DEFAULT_PROPS_REGEX.test(joined) && containsRechartsComponent(args);
+  }
+
+  function shouldSuppress(args: any[]) {
+    const joined = argsToString(args);
+    if (DEFAULT_PROPS_REGEX.test(joined) && containsRechartsComponent(args)) return true;
+    if (isInterpolatedDefaultPropsWarning(args)) return true;
+    return false;
+  }
+
+  function makeSuppressor(originalFn: (...a: any[]) => void) {
+    return (...args: any[]) => {
+      try {
+        if (shouldSuppress(args)) return;
+      } catch (e) {
+        // If suppression check crashes for any reason, fall back to original behavior
+        return originalFn(...args);
+      }
+      return originalFn(...args);
+    };
+  }
+
+  console.warn = makeSuppressor(originalWarn);
+  console.error = makeSuppressor(originalError);
 }
