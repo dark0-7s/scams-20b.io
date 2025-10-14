@@ -41,10 +41,8 @@
 
           function shouldSuppress(args){
             const joined = argsToString(args);
-            if (!DEFAULT_RE.test(joined)) return false;
-            if (containsComponent(args)) return true;
-            // handle interpolated React warnings where %s is used
-            if (typeof args[0] === 'string' && args[0].indexOf('%s') !== -1 && DEFAULT_RE.test(joined) && containsComponent(args)) return true;
+            if (DEFAULT_RE.test(joined)) return true;
+            if (typeof args[0] === 'string' && args[0].indexOf('%s') !== -1 && DEFAULT_RE.test(joined)) return true;
             return false;
           }
 
