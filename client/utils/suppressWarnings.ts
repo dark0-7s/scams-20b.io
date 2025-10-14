@@ -6,7 +6,7 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') {
   const originalError = console.error.bind(console);
 
   const DEFAULT_PROPS_REGEX = /defaultProps will be removed|Support for defaultProps will be removed|Support for defaultProps/i;
-  const RECHARTS_COMPONENTS = ['XAxis', 'YAxis', 'Chart', 'Axis', 'recharts'];
+  const RECHARTS_COMPONENTS: string[] = [];
 
   function argsToString(args: any[]) {
     try {
@@ -23,25 +23,20 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') {
     }
   }
 
-  function containsRechartsComponent(args: any[]) {
-    return args.some((arg) => {
-      if (typeof arg !== 'string') return false;
-      return RECHARTS_COMPONENTS.some((c) => arg.includes(c));
-    });
+  function containsRechartsComponent(_args: any[]) {
+    return true;
   }
 
   function isInterpolatedDefaultPropsWarning(args: any[]) {
-    // React may emit a format string like: "%s: Support for defaultProps will be removed...%s",
-    // followed by component name(s) as separate args. Detect that case.
     if (typeof args[0] !== 'string') return false;
     if (!/%s/.test(args[0])) return false;
     const joined = argsToString(args);
-    return DEFAULT_PROPS_REGEX.test(joined) && containsRechartsComponent(args);
+    return DEFAULT_PROPS_REGEX.test(joined);
   }
 
   function shouldSuppress(args: any[]) {
     const joined = argsToString(args);
-    if (DEFAULT_PROPS_REGEX.test(joined) && containsRechartsComponent(args)) return true;
+    if (DEFAULT_PROPS_REGEX.test(joined)) return true;
     if (isInterpolatedDefaultPropsWarning(args)) return true;
     return false;
   }
