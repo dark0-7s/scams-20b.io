@@ -43,9 +43,11 @@
             }
           }
 
+          const CREATE_ROOT_RE = /createRoot\(|already been passed to createRoot|root\.render\(|ReactDOMClient\.createRoot/i;
           function shouldSuppress(args) {
             const joined = argsToString(args);
             if (DEFAULT_RE.test(joined)) return true;
+            if (CREATE_ROOT_RE.test(joined)) return true;
             if (
               typeof args[0] === "string" &&
               args[0].indexOf("%s") !== -1 &&
