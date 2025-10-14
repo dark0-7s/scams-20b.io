@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
+import { ingestAttendance, listSessions, startSession, stopSession, streamSession } from "./routes/sessions";
 
 export function createServer() {
   const app = express();
@@ -18,6 +19,13 @@ export function createServer() {
   });
 
   app.get("/api/demo", handleDemo);
+
+  // SCAMS APIs
+  app.get('/api/sessions', listSessions);
+  app.post('/api/sessions', startSession);
+  app.post('/api/sessions/:id/stop', stopSession);
+  app.get('/api/sessions/:id/stream', streamSession);
+  app.post('/api/attendance', ingestAttendance);
 
   return app;
 }
