@@ -25,6 +25,33 @@ export default defineConfig(({ mode }) => ({
   },
 }));
 
+function suppressRechartsPlugin(): Plugin {
+  return {
+    name: 'suppress-recharts-warnings',
+    apply: 'both',
+    transform(code, id) {
+      try {
+        if (!/node_modules.*recharts/.test(id) && !/recharts(\.js|\.mjs|\/index\.js)/.test(id)) return null;
+        // Prepend a light-weight suppression wrapper to module so console methods are guarded
+        const patch = `// Injected by suppress-recharts-warnings plugin
+(function(){
+  try{
+    var R_SUPPRESS_RE = /defaultProps|Support for defaultProps will be removed|createRoot|already been passed to createRoot|root\\.render|ReactDOMClient\\.createRoot/i;
+    var origWarn = console.warn && console.warn.bind(console);
+    var origError = console.error && console.error.bind(console);
+    if(origWarn) console.warn = function(){ try{ var args = Array.prototype.slice.call(arguments); var joined = args.map(function(a){ return typeof a === 'string' ? a : JSON.stringify(a); }).join(' '); if(R_SUPPRESS_RE.test(joined)) return; }catch(e){} return origWarn.apply(console, arguments); };
+    if(origError) console.error = function(){ try{ var args = Array.prototype.slice.call(arguments); var joined = args.map(function(a){ return typeof a === 'string' ? a : JSON.stringify(a); }).join(' '); if(R_SUPPRESS_RE.test(joined)) return; }catch(e){} return origError.apply(console, arguments); };
+  }catch(e){}
+})();
+`;
+        return patch + code;
+      } catch (e) {
+        return null;
+      }
+    }
+  };
+}
+
 function expressPlugin(): Plugin {
   return {
     name: "express-plugin",
