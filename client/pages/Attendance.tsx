@@ -9,7 +9,6 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Calendar as CalendarIcon,
-  Fingerprint,
   Bluetooth,
   CheckCircle,
   XCircle,
@@ -175,7 +174,6 @@ export default function Attendance() {
         </div>
         {user?.role === 'student' && (
           <Button onClick={handleStudentMark} disabled={isMarkingAttendance}>
-            <Fingerprint className="w-4 h-4 mr-2" />
             {isMarkingAttendance ? 'Marking...' : 'Mark Attendance'}
           </Button>
         )}
