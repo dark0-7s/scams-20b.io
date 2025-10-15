@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="theme-color" content="#0ea5a4" />
+  <title>SCAMS</title>
+    <script>
+      (function () {
+        if (typeof window === "undefined" || typeof console === "undefined")
+          return;
+        try {
+          if (window.__SUPPRESS_WARNINGS_HEAD_APPLIED__) return;
+          window.__SUPPRESS_WARNINGS_HEAD_APPLIED__ = true;
+
+          var originalWarn = console.warn && console.warn.bind(console);
+          var originalError = console.error && console.error.bind(console);
+          var originalInfo =
+            typeof console.info === "function"
+              ? console.info.bind(console)
+              : null;
+          var originalLog = console.log && console.log.bind(console);
+
+          var SUPPRESS_RE =
+            /defaultProps|Support for defaultProps will be removed|createRoot|already been passed to createRoot|root\.render|ReactDOMClient\.createRoot/i;
+
+          function argsToString(args) {
+            try {
+              return Array.prototype.map
+                .call(args, function (a) {
+                  return typeof a === "string" ? a : JSON.stringify(a);
+                })
+                .join(" ");
+            } catch (e) {
+              try {
+                return String(Array.prototype.slice.call(args));
+              } catch {
+                return "";
+              }
+            }
+          }
+
+          function shouldSuppress(args) {
+            try {
+              if (!args || args.length === 0) return false;
+              if (typeof args[0] === "string" && SUPPRESS_RE.test(args[0]))
+                return true;
+              var joined = argsToString(args);
+              if (SUPPRESS_RE.test(joined)) return true;
+            } catch (e) {
+              return false;
+            }
+            return false;
+          }
+
+          if (originalWarn)
+            console.warn = function () {
+              if (shouldSuppress(arguments)) return;
+              return originalWarn.apply(console, arguments);
+            };
+          if (originalError)
+            console.error = function () {
+              if (shouldSuppress(arguments)) return;
+              return originalError.apply(console, arguments);
+            };
+          if (originalInfo)
+            console.info = function () {
+              if (shouldSuppress(arguments)) return;
+              return originalInfo.apply(console, arguments);
+            };
+          if (originalLog)
+            console.log = function () {
+              if (shouldSuppress(arguments)) return;
+              return originalLog.apply(console, arguments);
+            };
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+
+  <body>
+    <div id="root"></div>
+
+    <script>
+      (function () {
+        if (typeof window === "undefined" || typeof console === "undefined") return;
+        try {
+          if (window.__SUPPRESS_WARNINGS_APPLIED__) return;
+          window.__SUPPRESS_WARNINGS_APPLIED__ = true;
+
+          const originalWarn = console.warn.bind(console);
+          const originalError = console.error.bind(console);
+          const originalInfo = typeof console.info === 'function' ? console.info.bind(console) : null;
+          const originalLog = console.log.bind(console);
+
+          // Broad suppression to remove noisy Recharts React warnings and duplicate createRoot warnings.
+          const SUPPRESS_RE = /defaultProps|Support for defaultProps will be removed|createRoot|already been passed to createRoot|root\.render|ReactDOMClient\.createRoot/i;
+
+          function argsToString(args) {
+            try {
+              return Array.prototype.map.call(args, function (a) {
+                return typeof a === 'string' ? a : JSON.stringify(a);
+              }).join(' ');
+            } catch (e) {
+              try { return String(Array.prototype.slice.call(args)); } catch { return '' }
+            }
+          }
+
+          function shouldSuppress(args) {
+            try {
+              // Fast-path: if first arg is a string and contains a target phrase
+              if (typeof args[0] === 'string' && SUPPRESS_RE.test(args[0])) return true;
+
+              // Otherwise stringify each arg and test
+              const joined = argsToString(args);
+              if (SUPPRESS_RE.test(joined)) return true;
+            } catch (e) {
+              // If anything goes wrong, do not prevent app from running; fall back to not suppressing
+              return false;
+            }
+            return false;
+          }
+
+          console.warn = function () {
+            if (shouldSuppress(arguments)) return;
+            return originalWarn.apply(console, arguments);
+          };
+          console.error = function () {
+            if (shouldSuppress(arguments)) return;
+            return originalError.apply(console, arguments);
+          };
+          if (originalInfo) {
+            console.info = function () {
+              if (shouldSuppress(arguments)) return;
+              return originalInfo.apply(console, arguments);
+            };
+          }
+          console.log = function () {
+            if (shouldSuppress(arguments)) return;
+            return originalLog.apply(console, arguments);
+          };
+        } catch (e) {
+          /* fail quietly */
+        }
+      })();
+    </script>
+
+    <script type="module" src="/client/App.tsx"></script>
+  </body>
+</html>
