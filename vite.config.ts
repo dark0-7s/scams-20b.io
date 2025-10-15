@@ -27,11 +27,15 @@ export default defineConfig(({ mode }) => ({
 
 function suppressRechartsPlugin(): Plugin {
   return {
-    name: 'suppress-recharts-warnings',
-    apply: 'both',
+    name: "suppress-recharts-warnings",
+    apply: "both",
     transform(code, id) {
       try {
-        if (!/node_modules.*recharts/.test(id) && !/recharts(\.js|\.mjs|\/index\.js)/.test(id)) return null;
+        if (
+          !/node_modules.*recharts/.test(id) &&
+          !/recharts(\.js|\.mjs|\/index\.js)/.test(id)
+        )
+          return null;
         // Prepend a light-weight suppression wrapper to module so console methods are guarded
         const patch = `// Injected by suppress-recharts-warnings plugin
 (function(){
@@ -48,7 +52,7 @@ function suppressRechartsPlugin(): Plugin {
       } catch (e) {
         return null;
       }
-    }
+    },
   };
 }
 

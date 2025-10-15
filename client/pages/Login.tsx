@@ -4,7 +4,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Mail, Lock } from "lucide-react";
 
 export default function Login() {
@@ -24,10 +30,11 @@ export default function Login() {
 
     const success = await login(email, password);
     if (!success) {
-      setError("Invalid email or password. Try: admin@university.edu, dept.cs@university.edu, lecturer@university.edu, or student@university.edu with password 'password'");
+      setError(
+        "Invalid email or password. Try: admin@university.edu, dept.cs@university.edu, lecturer@university.edu, or student@university.edu with password 'password'",
+      );
     }
   };
-
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 flex items-center justify-center p-4">
@@ -35,10 +42,14 @@ export default function Login() {
         {/* Logo and Title */}
         <div className="text-center mb-8">
           <div className="bg-primary rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-2xl">S</span>
+            <span className="text-primary-foreground font-bold text-2xl">
+              S
+            </span>
           </div>
           <h1 className="text-3xl font-bold text-foreground mb-2">SCAMS</h1>
-          <p className="text-muted-foreground">Smart Classroom Attendance Management System</p>
+          <p className="text-muted-foreground">
+            Smart Classroom Attendance Management System
+          </p>
         </div>
 
         {/* Login Card */}
@@ -66,7 +77,7 @@ export default function Login() {
                   />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">

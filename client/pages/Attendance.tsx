@@ -1,12 +1,28 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Calendar as CalendarIcon,
   Bluetooth,
@@ -19,29 +35,93 @@ import {
   AlertTriangle,
   Filter,
   Download,
-  RefreshCw
+  RefreshCw,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { listSessions, startSession, stopSession, openAttendanceStream, ingestAttendance, exportCsv } from "@/lib/scams";
+import {
+  listSessions,
+  startSession,
+  stopSession,
+  openAttendanceStream,
+  ingestAttendance,
+  exportCsv,
+} from "@/lib/scams";
 import type { AttendanceRecord, Session, SessionMode } from "@shared/api";
 
 // Mock attendance data (historical)
 const attendanceRecords = [
-  { date: "2024-01-15", subject: "Data Structures", status: "present", time: "09:15 AM", method: "verified" },
-  { date: "2024-01-15", subject: "Database Lab", status: "present", time: "02:30 PM", method: "bluetooth" },
-  { date: "2024-01-14", subject: "Algorithms", status: "present", time: "11:05 AM", method: "verified" },
-  { date: "2024-01-14", subject: "Computer Networks", status: "absent", time: "-", method: "-" },
-  { date: "2024-01-13", subject: "Software Engineering", status: "present", time: "10:20 AM", method: "manual" },
-  { date: "2024-01-12", subject: "Data Structures", status: "present", time: "09:12 AM", method: "verified" }
+  {
+    date: "2024-01-15",
+    subject: "Data Structures",
+    status: "present",
+    time: "09:15 AM",
+    method: "verified",
+  },
+  {
+    date: "2024-01-15",
+    subject: "Database Lab",
+    status: "present",
+    time: "02:30 PM",
+    method: "bluetooth",
+  },
+  {
+    date: "2024-01-14",
+    subject: "Algorithms",
+    status: "present",
+    time: "11:05 AM",
+    method: "verified",
+  },
+  {
+    date: "2024-01-14",
+    subject: "Computer Networks",
+    status: "absent",
+    time: "-",
+    method: "-",
+  },
+  {
+    date: "2024-01-13",
+    subject: "Software Engineering",
+    status: "present",
+    time: "10:20 AM",
+    method: "manual",
+  },
+  {
+    date: "2024-01-12",
+    subject: "Data Structures",
+    status: "present",
+    time: "09:12 AM",
+    method: "verified",
+  },
 ];
 
-const subjects = ["All Subjects", "Data Structures", "Algorithms", "Database Lab", "Computer Networks", "Software Engineering"];
+const subjects = [
+  "All Subjects",
+  "Data Structures",
+  "Algorithms",
+  "Database Lab",
+  "Computer Networks",
+  "Software Engineering",
+];
 
 const timetable = [
-  { id: 'tt1', subject: 'Data Structures', teacherId: '3', room: 'A-101', startTime: Date.now(), endTime: Date.now()+3600000 },
-  { id: 'tt2', subject: 'Algorithms', teacherId: '3', room: 'A-202', startTime: Date.now()+7200000, endTime: Date.now()+10800000 },
+  {
+    id: "tt1",
+    subject: "Data Structures",
+    teacherId: "3",
+    room: "A-101",
+    startTime: Date.now(),
+    endTime: Date.now() + 3600000,
+  },
+  {
+    id: "tt2",
+    subject: "Algorithms",
+    teacherId: "3",
+    room: "A-202",
+    startTime: Date.now() + 7200000,
+    endTime: Date.now() + 10800000,
+  },
 ];
 
 export default function Attendance() {
@@ -52,25 +132,33 @@ export default function Attendance() {
   const [dateFrom, setDateFrom] = useState<Date>();
   const [dateTo, setDateTo] = useState<Date>();
   const [isMarkingAttendance, setIsMarkingAttendance] = useState(false);
-  const [attendanceMethod, setAttendanceMethod] = useState<'bluetooth' | 'manual'>('bluetooth');
-  const [scanningStatus, setScanningStatus] = useState<'idle' | 'scanning' | 'success' | 'failed'>('idle');
+  const [attendanceMethod, setAttendanceMethod] = useState<
+    "bluetooth" | "manual"
+  >("bluetooth");
+  const [scanningStatus, setScanningStatus] = useState<
+    "idle" | "scanning" | "success" | "failed"
+  >("idle");
 
   // Live session state (teacher/coordinator)
-  const [mode, setMode] = useState<SessionMode>('ble');
-  const [selectedTimetable, setSelectedTimetable] = useState<string>(timetable[0]?.id ?? '');
+  const [mode, setMode] = useState<SessionMode>("ble");
+  const [selectedTimetable, setSelectedTimetable] = useState<string>(
+    timetable[0]?.id ?? "",
+  );
   const [activeSession, setActiveSession] = useState<Session | null>(null);
   const [liveRecords, setLiveRecords] = useState<AttendanceRecord[]>([]);
   const unsubscribeRef = useRef<null | (() => void)>(null);
 
   useEffect(() => {
-    if (user && user.role !== 'student') {
-      listSessions().then(s => {
-        const active = s.find(x => x.active);
-        if (active) {
-          setActiveSession(active);
-          subscribe(active.id);
-        }
-      }).catch(() => {});
+    if (user && user.role !== "student") {
+      listSessions()
+        .then((s) => {
+          const active = s.find((x) => x.active);
+          if (active) {
+            setActiveSession(active);
+            subscribe(active.id);
+          }
+        })
+        .catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
@@ -78,7 +166,7 @@ export default function Attendance() {
   function subscribe(id: string) {
     unsubscribeRef.current?.();
     const off = openAttendanceStream(id, (u) => {
-      if (u.type === 'attendance') setLiveRecords(prev => [u.data, ...prev]);
+      if (u.type === "attendance") setLiveRecords((prev) => [u.data, ...prev]);
     });
     unsubscribeRef.current = off;
   }
@@ -89,9 +177,16 @@ export default function Attendance() {
       setActiveSession(sess);
       setLiveRecords([]);
       subscribe(sess.id);
-      toast({ title: 'Session started', description: `${sess.mode.toUpperCase()} session is live.` });
+      toast({
+        title: "Session started",
+        description: `${sess.mode.toUpperCase()} session is live.`,
+      });
     } catch (e) {
-      toast({ title: 'Unable to start session', description: 'Check schedule/overlap.', variant: 'destructive' });
+      toast({
+        title: "Unable to start session",
+        description: "Check schedule/overlap.",
+        variant: "destructive",
+      });
     }
   }
 
@@ -101,62 +196,86 @@ export default function Attendance() {
       const sess = await stopSession(activeSession.id);
       setActiveSession(sess);
       unsubscribeRef.current?.();
-      toast({ title: 'Session stopped' });
+      toast({ title: "Session stopped" });
     } catch (e) {
-      toast({ title: 'Failed to stop session', variant: 'destructive' });
+      toast({ title: "Failed to stop session", variant: "destructive" });
     }
   }
 
   async function handleStudentMark() {
     setIsMarkingAttendance(true);
-    setScanningStatus('scanning');
+    setScanningStatus("scanning");
     try {
       const sessions = await listSessions();
-      const online = sessions.find(s => s.active && s.mode === 'online');
-      if (!online) throw new Error('No active online session');
+      const online = sessions.find((s) => s.active && s.mode === "online");
+      if (!online) throw new Error("No active online session");
       const record = await ingestAttendance({
         sessionId: online.id,
         userId: user!.id,
-        method: 'online',
+        method: "online",
         timestamp: Date.now(),
-        metadata: { source: 'client' }
+        metadata: { source: "client" },
       });
-      setScanningStatus('success');
-      toast({ title: 'Attendance recorded', description: `Time: ${new Date(record.timestamp).toLocaleTimeString()}` });
+      setScanningStatus("success");
+      toast({
+        title: "Attendance recorded",
+        description: `Time: ${new Date(record.timestamp).toLocaleTimeString()}`,
+      });
     } catch (e: any) {
-      setScanningStatus('failed');
-      toast({ title: 'Could not mark attendance', description: e?.message ?? 'Try again later', variant: 'destructive' });
+      setScanningStatus("failed");
+      toast({
+        title: "Could not mark attendance",
+        description: e?.message ?? "Try again later",
+        variant: "destructive",
+      });
     } finally {
-      setTimeout(() => { setIsMarkingAttendance(false); setScanningStatus('idle'); }, 1500);
+      setTimeout(() => {
+        setIsMarkingAttendance(false);
+        setScanningStatus("idle");
+      }, 1500);
     }
   }
 
   function downloadCsv(rows: AttendanceRecord[]) {
     const csv = exportCsv(rows);
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = 'attendance.csv';
+    a.download = "attendance.csv";
     a.click();
     URL.revokeObjectURL(url);
   }
 
-  const filteredRecords = attendanceRecords.filter(record => {
-    if (selectedSubject !== "All Subjects" && record.subject !== selectedSubject) return false;
+  const filteredRecords = attendanceRecords.filter((record) => {
+    if (
+      selectedSubject !== "All Subjects" &&
+      record.subject !== selectedSubject
+    )
+      return false;
     if (dateFrom && new Date(record.date) < dateFrom) return false;
     if (dateTo && new Date(record.date) > dateTo) return false;
     return true;
   });
 
-  const getStatusColor = (status: string) => status === 'present' ? 'text-green-600' : 'text-red-600';
-  const getStatusIcon = (status: string) => status === 'present' ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />;
+  const getStatusColor = (status: string) =>
+    status === "present" ? "text-green-600" : "text-red-600";
+  const getStatusIcon = (status: string) =>
+    status === "present" ? (
+      <CheckCircle className="h-4 w-4" />
+    ) : (
+      <XCircle className="h-4 w-4" />
+    );
   const getMethodIcon = (method: string) => {
     switch (method) {
-      case 'bluetooth': return <Bluetooth className="h-4 w-4 text-green-600" />;
-      case 'verified': return <CheckCircle className="h-4 w-4 text-blue-600" />;
-      case 'manual': return <Users className="h-4 w-4 text-gray-600" />;
-      default: return null;
+      case "bluetooth":
+        return <Bluetooth className="h-4 w-4 text-green-600" />;
+      case "verified":
+        return <CheckCircle className="h-4 w-4 text-blue-600" />;
+      case "manual":
+        return <Users className="h-4 w-4 text-gray-600" />;
+      default:
+        return null;
     }
   };
 
@@ -169,12 +288,14 @@ export default function Attendance() {
         <div>
           <h1 className="text-2xl font-bold">Attendance Management</h1>
           <p className="text-muted-foreground">
-            {user?.role === 'student' ? 'View your attendance records and mark attendance' : 'Manage attendance for your classes'}
+            {user?.role === "student"
+              ? "View your attendance records and mark attendance"
+              : "Manage attendance for your classes"}
           </p>
         </div>
-        {user?.role === 'student' && (
+        {user?.role === "student" && (
           <Button onClick={handleStudentMark} disabled={isMarkingAttendance}>
-            {isMarkingAttendance ? 'Marking...' : 'Mark Attendance'}
+            {isMarkingAttendance ? "Marking..." : "Mark Attendance"}
           </Button>
         )}
       </div>
@@ -182,8 +303,12 @@ export default function Attendance() {
       <Tabs defaultValue="records" className="space-y-4">
         <TabsList>
           <TabsTrigger value="records">Attendance Records</TabsTrigger>
-          {user && user.role !== 'student' && <TabsTrigger value="live">Live Session</TabsTrigger>}
-          {user?.role !== 'student' && <TabsTrigger value="mark">Mark Attendance</TabsTrigger>}
+          {user && user.role !== "student" && (
+            <TabsTrigger value="live">Live Session</TabsTrigger>
+          )}
+          {user?.role !== "student" && (
+            <TabsTrigger value="mark">Mark Attendance</TabsTrigger>
+          )}
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
@@ -198,60 +323,96 @@ export default function Attendance() {
             </CardHeader>
             <CardContent className="flex flex-wrap gap-4">
               <div className="flex-1 min-w-48">
-                <label className="text-sm font-medium mb-2 block">Subject</label>
-                <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                <label className="text-sm font-medium mb-2 block">
+                  Subject
+                </label>
+                <Select
+                  value={selectedSubject}
+                  onValueChange={setSelectedSubject}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select subject" />
                   </SelectTrigger>
                   <SelectContent>
-                    {subjects.map(subject => (
-                      <SelectItem key={subject} value={subject}>{subject}</SelectItem>
+                    {subjects.map((subject) => (
+                      <SelectItem key={subject} value={subject}>
+                        {subject}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="flex-1 min-w-48">
-                <label className="text-sm font-medium mb-2 block">From Date</label>
+                <label className="text-sm font-medium mb-2 block">
+                  From Date
+                </label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left">
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left"
+                    >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {dateFrom ? format(dateFrom, "PPP") : "Pick a date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} />
+                    <Calendar
+                      mode="single"
+                      selected={dateFrom}
+                      onSelect={setDateFrom}
+                    />
                   </PopoverContent>
                 </Popover>
               </div>
 
               <div className="flex-1 min-w-48">
-                <label className="text-sm font-medium mb-2 block">To Date</label>
+                <label className="text-sm font-medium mb-2 block">
+                  To Date
+                </label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left">
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left"
+                    >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {dateTo ? format(dateTo, "PPP") : "Pick a date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={dateTo} onSelect={setDateTo} />
+                    <Calendar
+                      mode="single"
+                      selected={dateTo}
+                      onSelect={setDateTo}
+                    />
                   </PopoverContent>
                 </Popover>
               </div>
 
               <div className="flex items-end">
-                <Button variant="outline" onClick={() => {
-                  const rows: AttendanceRecord[] = filteredRecords.map((r, i) => ({
-                    id: String(i+1),
-                    sessionId: 'history',
-                    userId: user?.id || 'user',
-                    method: (r.method === 'bluetooth' ? 'ble' : r.method === 'verified' ? 'verified' : 'manual') as any,
-                    timestamp: new Date(r.date + ' ' + (r.time === '-' ? '00:00' : r.time)).getTime(),
-                  }));
-                  downloadCsv(rows);
-                }}>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const rows: AttendanceRecord[] = filteredRecords.map(
+                      (r, i) => ({
+                        id: String(i + 1),
+                        sessionId: "history",
+                        userId: user?.id || "user",
+                        method: (r.method === "bluetooth"
+                          ? "ble"
+                          : r.method === "verified"
+                            ? "verified"
+                            : "manual") as any,
+                        timestamp: new Date(
+                          r.date + " " + (r.time === "-" ? "00:00" : r.time),
+                        ).getTime(),
+                      }),
+                    );
+                    downloadCsv(rows);
+                  }}
+                >
                   <Download className="w-4 h-4 mr-2" />
                   Export
                 </Button>
@@ -282,19 +443,27 @@ export default function Attendance() {
                   <tbody>
                     {filteredRecords.map((record, index) => (
                       <tr key={index} className="border-b hover:bg-muted/50">
-                        <td className="p-3">{new Date(record.date).toLocaleDateString()}</td>
+                        <td className="p-3">
+                          {new Date(record.date).toLocaleDateString()}
+                        </td>
                         <td className="p-3 font-medium">{record.subject}</td>
                         <td className="p-3">
-                          <div className={`flex items-center ${getStatusColor(record.status)}`}>
+                          <div
+                            className={`flex items-center ${getStatusColor(record.status)}`}
+                          >
                             {getStatusIcon(record.status)}
-                            <span className="ml-2 capitalize">{record.status}</span>
+                            <span className="ml-2 capitalize">
+                              {record.status}
+                            </span>
                           </div>
                         </td>
                         <td className="p-3">{record.time}</td>
                         <td className="p-3">
                           <div className="flex items-center">
                             {getMethodIcon(record.method)}
-                            <span className="ml-2 capitalize text-sm">{record.method}</span>
+                            <span className="ml-2 capitalize text-sm">
+                              {record.method}
+                            </span>
                           </div>
                         </td>
                       </tr>
@@ -306,31 +475,45 @@ export default function Attendance() {
           </Card>
         </TabsContent>
 
-        {user?.role !== 'student' && (
+        {user?.role !== "student" && (
           <TabsContent value="live" className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle>Session Controls</CardTitle>
-                <CardDescription>Start/stop sessions and monitor live attendance</CardDescription>
+                <CardDescription>
+                  Start/stop sessions and monitor live attendance
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Timetable</label>
-                    <Select value={selectedTimetable} onValueChange={setSelectedTimetable}>
+                    <label className="text-sm font-medium mb-2 block">
+                      Timetable
+                    </label>
+                    <Select
+                      value={selectedTimetable}
+                      onValueChange={setSelectedTimetable}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select class" />
                       </SelectTrigger>
                       <SelectContent>
-                        {timetable.map(tt => (
-                          <SelectItem key={tt.id} value={tt.id}>{tt.subject} • {tt.room}</SelectItem>
+                        {timetable.map((tt) => (
+                          <SelectItem key={tt.id} value={tt.id}>
+                            {tt.subject} • {tt.room}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Mode</label>
-                    <Select value={mode} onValueChange={(v) => setMode(v as SessionMode)}>
+                    <label className="text-sm font-medium mb-2 block">
+                      Mode
+                    </label>
+                    <Select
+                      value={mode}
+                      onValueChange={(v) => setMode(v as SessionMode)}
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -342,18 +525,32 @@ export default function Attendance() {
                   </div>
                   <div className="flex items-end gap-2">
                     {!activeSession?.active && (
-                      <Button className="w-full" onClick={handleStartSession}>Start Session</Button>
+                      <Button className="w-full" onClick={handleStartSession}>
+                        Start Session
+                      </Button>
                     )}
                     {activeSession?.active && (
-                      <Button variant="destructive" className="w-full" onClick={handleStopSession}>Stop Session</Button>
+                      <Button
+                        variant="destructive"
+                        className="w-full"
+                        onClick={handleStopSession}
+                      >
+                        Stop Session
+                      </Button>
                     )}
                   </div>
                 </div>
 
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <div className="text-sm text-muted-foreground">Session: {activeSession ? activeSession.id : 'None'}</div>
-                    <Button variant="outline" size="sm" onClick={() => downloadCsv(liveRecords)}>
+                    <div className="text-sm text-muted-foreground">
+                      Session: {activeSession ? activeSession.id : "None"}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => downloadCsv(liveRecords)}
+                    >
                       <Download className="w-4 h-4 mr-2" /> Export CSV
                     </Button>
                   </div>
@@ -368,16 +565,27 @@ export default function Attendance() {
                         </tr>
                       </thead>
                       <tbody>
-                        {liveRecords.map(r => (
+                        {liveRecords.map((r) => (
                           <tr key={r.id} className="border-b">
                             <td className="p-3">{r.userId}</td>
-                            <td className="p-3">{new Date(r.timestamp).toLocaleTimeString()}</td>
+                            <td className="p-3">
+                              {new Date(r.timestamp).toLocaleTimeString()}
+                            </td>
                             <td className="p-3 capitalize">{r.method}</td>
-                            <td className="p-3 capitalize text-xs text-muted-foreground">{r.metadata?.source ?? ''}</td>
+                            <td className="p-3 capitalize text-xs text-muted-foreground">
+                              {r.metadata?.source ?? ""}
+                            </td>
                           </tr>
                         ))}
                         {liveRecords.length === 0 && (
-                          <tr><td className="p-4 text-sm text-muted-foreground" colSpan={4}>No attendance yet.</td></tr>
+                          <tr>
+                            <td
+                              className="p-4 text-sm text-muted-foreground"
+                              colSpan={4}
+                            >
+                              No attendance yet.
+                            </td>
+                          </tr>
                         )}
                       </tbody>
                     </table>
@@ -388,41 +596,51 @@ export default function Attendance() {
           </TabsContent>
         )}
 
-        {user?.role !== 'student' && (
+        {user?.role !== "student" && (
           <TabsContent value="mark" className="space-y-4">
             <div className="grid gap-4 lg:grid-cols-2">
               <Card>
                 <CardHeader>
                   <CardTitle>Attendance Methods</CardTitle>
-                  <CardDescription>Choose your preferred attendance marking method</CardDescription>
+                  <CardDescription>
+                    Choose your preferred attendance marking method
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div
                     className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                      attendanceMethod === 'bluetooth' ? 'border-primary bg-primary/5' : ''
+                      attendanceMethod === "bluetooth"
+                        ? "border-primary bg-primary/5"
+                        : ""
                     }`}
-                    onClick={() => setAttendanceMethod('bluetooth')}
+                    onClick={() => setAttendanceMethod("bluetooth")}
                   >
                     <div className="flex items-center space-x-3">
                       <Bluetooth className="h-8 w-8 text-blue-500" />
                       <div>
                         <h4 className="font-semibold">Bluetooth Low Energy</h4>
-                        <p className="text-sm text-muted-foreground">Proximity-based detection</p>
+                        <p className="text-sm text-muted-foreground">
+                          Proximity-based detection
+                        </p>
                       </div>
                     </div>
                   </div>
 
                   <div
                     className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                      attendanceMethod === 'manual' ? 'border-primary bg-primary/5' : ''
+                      attendanceMethod === "manual"
+                        ? "border-primary bg-primary/5"
+                        : ""
                     }`}
-                    onClick={() => setAttendanceMethod('manual')}
+                    onClick={() => setAttendanceMethod("manual")}
                   >
                     <div className="flex items-center space-x-3">
                       <Users className="h-8 w-8 text-green-500" />
                       <div>
                         <h4 className="font-semibold">Manual Entry</h4>
-                        <p className="text-sm text-muted-foreground">Traditional roll call method</p>
+                        <p className="text-sm text-muted-foreground">
+                          Traditional roll call method
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -432,23 +650,31 @@ export default function Attendance() {
               <Card>
                 <CardHeader>
                   <CardTitle>Live Attendance</CardTitle>
-                  <CardDescription>Current session attendance marking</CardDescription>
+                  <CardDescription>
+                    Current session attendance marking
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="text-center py-8">
-                    {attendanceMethod === 'bluetooth' && (
+                    {attendanceMethod === "bluetooth" && (
                       <div>
                         <Wifi className="h-16 w-16 mx-auto mb-4 text-blue-500" />
-                        <p className="font-medium">Bluetooth Detection Active</p>
-                        <p className="text-sm text-muted-foreground">Scanning for student devices</p>
+                        <p className="font-medium">
+                          Bluetooth Detection Active
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Scanning for student devices
+                        </p>
                       </div>
                     )}
 
-                    {attendanceMethod === 'manual' && (
+                    {attendanceMethod === "manual" && (
                       <div>
                         <Users className="h-16 w-16 mx-auto mb-4 text-green-500" />
                         <p className="font-medium">Manual Entry Mode</p>
-                        <p className="text-sm text-muted-foreground">Ready for roll call</p>
+                        <p className="text-sm text-muted-foreground">
+                          Ready for roll call
+                        </p>
                       </div>
                     )}
                   </div>
@@ -461,7 +687,11 @@ export default function Attendance() {
                     <Progress value={presentCount % 100} />
                   </div>
 
-                  <Button className="w-full" onClick={handleStopSession} disabled={!activeSession?.active}>
+                  <Button
+                    className="w-full"
+                    onClick={handleStopSession}
+                    disabled={!activeSession?.active}
+                  >
                     <CheckCircle className="w-4 h-4 mr-2" />
                     Complete Attendance
                   </Button>
@@ -501,7 +731,9 @@ export default function Attendance() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">78/90</div>
-                <p className="text-xs text-muted-foreground">Total this semester</p>
+                <p className="text-xs text-muted-foreground">
+                  Total this semester
+                </p>
               </CardContent>
             </Card>
 
@@ -511,7 +743,9 @@ export default function Attendance() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">12 days</div>
-                <p className="text-xs text-muted-foreground">Perfect attendance</p>
+                <p className="text-xs text-muted-foreground">
+                  Perfect attendance
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -524,7 +758,9 @@ export default function Attendance() {
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <h4 className="text-sm font-medium mb-3">Best Performing Subjects</h4>
+                  <h4 className="text-sm font-medium mb-3">
+                    Best Performing Subjects
+                  </h4>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Database Lab</span>
@@ -568,63 +804,77 @@ export default function Attendance() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-center py-8">
-                {scanningStatus === 'scanning' && (
+                {scanningStatus === "scanning" && (
                   <div className="animate-pulse">
                     <div className="relative">
-                      {attendanceMethod === 'bluetooth' && <Bluetooth className="h-16 w-16 mx-auto mb-4 text-blue-500" />}
-                      {attendanceMethod === 'manual' && <Users className="h-16 w-16 mx-auto mb-4 text-green-500" />}
+                      {attendanceMethod === "bluetooth" && (
+                        <Bluetooth className="h-16 w-16 mx-auto mb-4 text-blue-500" />
+                      )}
+                      {attendanceMethod === "manual" && (
+                        <Users className="h-16 w-16 mx-auto mb-4 text-green-500" />
+                      )}
                       <div className="absolute inset-0 border-2 border-primary rounded-full animate-ping"></div>
                     </div>
-                    <p className="text-sm font-medium">Scanning in progress...</p>
+                    <p className="text-sm font-medium">
+                      Scanning in progress...
+                    </p>
                     <p className="text-xs text-muted-foreground">Please wait</p>
                   </div>
                 )}
 
-                {scanningStatus === 'success' && (
+                {scanningStatus === "success" && (
                   <div>
                     <CheckCircle className="h-16 w-16 mx-auto mb-4 text-green-600" />
-                    <p className="text-sm font-medium text-green-600">Attendance Marked Successfully!</p>
-                    <p className="text-xs text-muted-foreground">Present at {new Date().toLocaleTimeString()}</p>
+                    <p className="text-sm font-medium text-green-600">
+                      Attendance Marked Successfully!
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Present at {new Date().toLocaleTimeString()}
+                    </p>
                   </div>
                 )}
 
-                {scanningStatus === 'failed' && (
+                {scanningStatus === "failed" && (
                   <div>
                     <XCircle className="h-16 w-16 mx-auto mb-4 text-red-600" />
-                    <p className="text-sm font-medium text-red-600">Verification Failed</p>
-                    <p className="text-xs text-muted-foreground">Please try again</p>
+                    <p className="text-sm font-medium text-red-600">
+                      Verification Failed
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Please try again
+                    </p>
                   </div>
                 )}
               </div>
 
-              {scanningStatus === 'scanning' && (
+              {scanningStatus === "scanning" && (
                 <Button
                   variant="outline"
                   className="w-full"
                   onClick={() => {
                     setIsMarkingAttendance(false);
-                    setScanningStatus('idle');
+                    setScanningStatus("idle");
                   }}
                 >
                   Cancel
                 </Button>
               )}
 
-              {scanningStatus === 'failed' && (
+              {scanningStatus === "failed" && (
                 <div className="flex space-x-2">
                   <Button
                     variant="outline"
                     className="flex-1"
                     onClick={() => {
                       setIsMarkingAttendance(false);
-                      setScanningStatus('idle');
+                      setScanningStatus("idle");
                     }}
                   >
                     Cancel
                   </Button>
                   <Button
                     className="flex-1"
-                    onClick={() => setScanningStatus('scanning')}
+                    onClick={() => setScanningStatus("scanning")}
                   >
                     <RefreshCw className="w-4 h-4 mr-2" />
                     Retry
