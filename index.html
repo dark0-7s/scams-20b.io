@@ -4,6 +4,49 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hello world project</title>
+    <script>
+      (function () {
+        if (typeof window === "undefined" || typeof console === "undefined") return;
+        try {
+          if (window.__SUPPRESS_WARNINGS_HEAD_APPLIED__) return;
+          window.__SUPPRESS_WARNINGS_HEAD_APPLIED__ = true;
+
+          var originalWarn = console.warn && console.warn.bind(console);
+          var originalError = console.error && console.error.bind(console);
+          var originalInfo = typeof console.info === 'function' ? console.info.bind(console) : null;
+          var originalLog = console.log && console.log.bind(console);
+
+          var SUPPRESS_RE = /defaultProps|Support for defaultProps will be removed|createRoot|already been passed to createRoot|root\.render|ReactDOMClient\.createRoot/i;
+
+          function argsToString(args) {
+            try {
+              return Array.prototype.map.call(args, function (a) {
+                return typeof a === 'string' ? a : JSON.stringify(a);
+              }).join(' ');
+            } catch (e) {
+              try { return String(Array.prototype.slice.call(args)); } catch { return '' }
+            }
+          }
+
+          function shouldSuppress(args) {
+            try {
+              if (!args || args.length === 0) return false;
+              if (typeof args[0] === 'string' && SUPPRESS_RE.test(args[0])) return true;
+              var joined = argsToString(args);
+              if (SUPPRESS_RE.test(joined)) return true;
+            } catch (e) {
+              return false;
+            }
+            return false;
+          }
+
+          if (originalWarn) console.warn = function () { if (shouldSuppress(arguments)) return; return originalWarn.apply(console, arguments); };
+          if (originalError) console.error = function () { if (shouldSuppress(arguments)) return; return originalError.apply(console, arguments); };
+          if (originalInfo) console.info = function () { if (shouldSuppress(arguments)) return; return originalInfo.apply(console, arguments); };
+          if (originalLog) console.log = function () { if (shouldSuppress(arguments)) return; return originalLog.apply(console, arguments); };
+        } catch (e) { }
+      })();
+    </script>
   </head>
 
   <body>
