@@ -52,7 +52,7 @@ export default function Attendance() {
   const [dateFrom, setDateFrom] = useState<Date>();
   const [dateTo, setDateTo] = useState<Date>();
   const [isMarkingAttendance, setIsMarkingAttendance] = useState(false);
-  const [attendanceMethod, setAttendanceMethod] = useState<'biometric' | 'bluetooth' | 'manual'>('biometric');
+  const [attendanceMethod, setAttendanceMethod] = useState<'bluetooth' | 'manual'>('bluetooth');
   const [scanningStatus, setScanningStatus] = useState<'idle' | 'scanning' | 'success' | 'failed'>('idle');
 
   // Live session state (teacher/coordinator)
@@ -153,7 +153,6 @@ export default function Attendance() {
   const getStatusIcon = (status: string) => status === 'present' ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />;
   const getMethodIcon = (method: string) => {
     switch (method) {
-      case 'biometric': return <Fingerprint className="h-4 w-4 text-blue-600" />;
       case 'bluetooth': return <Bluetooth className="h-4 w-4 text-green-600" />;
       case 'manual': return <Users className="h-4 w-4 text-gray-600" />;
       default: return null;
@@ -399,21 +398,6 @@ export default function Attendance() {
                 <CardContent className="space-y-4">
                   <div
                     className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                      attendanceMethod === 'biometric' ? 'border-primary bg-primary/5' : ''
-                    }`}
-                    onClick={() => setAttendanceMethod('biometric')}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <Fingerprint className="h-8 w-8 text-primary" />
-                      <div>
-                        <h4 className="font-semibold">Biometric Verification</h4>
-                        <p className="text-sm text-muted-foreground">Fingerprint scanning for students</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${
                       attendanceMethod === 'bluetooth' ? 'border-primary bg-primary/5' : ''
                     }`}
                     onClick={() => setAttendanceMethod('bluetooth')}
@@ -451,14 +435,6 @@ export default function Attendance() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="text-center py-8">
-                    {attendanceMethod === 'biometric' && (
-                      <div>
-                        <Fingerprint className="h-16 w-16 mx-auto mb-4 text-primary" />
-                        <p className="font-medium">Biometric Scanner Ready</p>
-                        <p className="text-sm text-muted-foreground">Students can scan fingerprints</p>
-                      </div>
-                    )}
-
                     {attendanceMethod === 'bluetooth' && (
                       <div>
                         <Wifi className="h-16 w-16 mx-auto mb-4 text-blue-500" />
