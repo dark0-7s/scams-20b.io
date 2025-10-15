@@ -11,49 +11,41 @@
 
     <script>
       (function () {
-        if (typeof window === "undefined" || typeof console === "undefined")
-          return;
+        if (typeof window === "undefined" || typeof console === "undefined") return;
         try {
+          if ((window as any).__SUPPRESS_WARNINGS_APPLIED__) return;
+          (window as any).__SUPPRESS_WARNINGS_APPLIED__ = true;
+
           const originalWarn = console.warn.bind(console);
           const originalError = console.error.bind(console);
-          const DEFAULT_RE =
-            /defaultProps will be removed|Support for defaultProps will be removed/i;
-          const COMPONENTS = ["XAxis", "YAxis", "Chart", "Axis", "recharts"];
+          const originalInfo = typeof console.info === 'function' ? console.info.bind(console) : null;
+          const originalLog = console.log.bind(console);
 
-          function containsComponent(args) {
-            for (let i = 0; i < args.length; i++) {
-              const a = args[i];
-              if (typeof a !== "string") continue;
-              for (let j = 0; j < COMPONENTS.length; j++) {
-                if (a.indexOf(COMPONENTS[j]) !== -1) return true;
-              }
-            }
-            return false;
-          }
+          // Broad suppression to remove noisy Recharts React warnings and duplicate createRoot warnings.
+          const SUPPRESS_RE = /defaultProps|Support for defaultProps will be removed|createRoot|already been passed to createRoot|root\.render|ReactDOMClient\.createRoot/i;
 
           function argsToString(args) {
             try {
-              return Array.prototype.map
-                .call(args, function (a) {
-                  return typeof a === "string" ? a : JSON.stringify(a);
-                })
-                .join(" ");
+              return Array.prototype.map.call(args, function (a) {
+                return typeof a === 'string' ? a : JSON.stringify(a);
+              }).join(' ');
             } catch (e) {
-              return String(args);
+              try { return String(Array.prototype.slice.call(args)); } catch { return '' }
             }
           }
 
-          const CREATE_ROOT_RE = /createRoot\(|already been passed to createRoot|root\.render\(|ReactDOMClient\.createRoot/i;
           function shouldSuppress(args) {
-            const joined = argsToString(args);
-            if (DEFAULT_RE.test(joined)) return true;
-            if (CREATE_ROOT_RE.test(joined)) return true;
-            if (
-              typeof args[0] === "string" &&
-              args[0].indexOf("%s") !== -1 &&
-              DEFAULT_RE.test(joined)
-            )
-              return true;
+            try {
+              // Fast-path: if first arg is a string and contains a target phrase
+              if (typeof args[0] === 'string' && SUPPRESS_RE.test(args[0])) return true;
+
+              // Otherwise stringify each arg and test
+              const joined = argsToString(args);
+              if (SUPPRESS_RE.test(joined)) return true;
+            } catch (e) {
+              // If anything goes wrong, do not prevent app from running; fall back to not suppressing
+              return false;
+            }
             return false;
           }
 
@@ -64,6 +56,16 @@
           console.error = function () {
             if (shouldSuppress(arguments)) return;
             return originalError.apply(console, arguments);
+          };
+          if (originalInfo) {
+            console.info = function () {
+              if (shouldSuppress(arguments)) return;
+              return originalInfo.apply(console, arguments);
+            };
+          }
+          console.log = function () {
+            if (shouldSuppress(arguments)) return;
+            return originalLog.apply(console, arguments);
           };
         } catch (e) {
           /* fail quietly */
