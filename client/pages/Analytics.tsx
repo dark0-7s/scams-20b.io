@@ -18,8 +18,6 @@ import {
   CheckCircle,
   Clock,
   BookOpen,
-  Fingerprint,
-  Bluetooth
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
@@ -30,11 +28,8 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer, 
-  LineChart, 
-  Line, 
-  PieChart, 
-  Pie, 
-  Cell,
+  LineChart,
+  Line,
   Area,
   AreaChart
 } from "recharts";
@@ -55,11 +50,6 @@ const departmentStats = [
   { name: 'Civil', students: 244, avgAttendance: 86, courses: 18, satisfaction: 4.5 }
 ];
 
-const attendanceMethodUsage = [
-  { name: 'Biometric', value: 65, color: '#3b82f6' },
-  { name: 'Bluetooth', value: 25, color: '#10b981' },
-  { name: 'Manual', value: 10, color: '#f59e0b' }
-];
 
 const subjectPerformance = [
   { subject: 'Data Structures', attendance: 92, engagement: 88, resources: 15, difficulty: 'High' },
@@ -121,10 +111,12 @@ export default function Analytics() {
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh Data
           </Button>
-          <Button>
-            <Download className="w-4 h-4 mr-2" />
-            Export Report
-          </Button>
+          {user?.role !== 'student' && (
+            <Button>
+              <Download className="w-4 h-4 mr-2" />
+              Export Report
+            </Button>
+          )}
         </div>
       </div>
 
@@ -244,45 +236,6 @@ export default function Analytics() {
             </Card>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Attendance Method Usage</CardTitle>
-              <CardDescription>Distribution of attendance marking methods</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-center">
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie
-                      data={attendanceMethodUsage}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {attendanceMethodUsage.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => `${value}%`} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex justify-center space-x-6 mt-4">
-                {attendanceMethodUsage.map((method, index) => (
-                  <div key={index} className="flex items-center">
-                    <div 
-                      className="w-3 h-3 rounded-full mr-2" 
-                      style={{ backgroundColor: method.color }}
-                    />
-                    <span className="text-sm">{method.name} ({method.value}%)</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="departments" className="space-y-4">
@@ -483,18 +436,6 @@ export default function Analytics() {
                   <div className="flex items-start space-x-3">
                     <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center mt-0.5">
                       <span className="text-xs font-medium text-primary">2</span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Expand Biometric Usage</p>
-                      <p className="text-xs text-muted-foreground">
-                        Increase biometric attendance points to reduce manual marking by 50%.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center mt-0.5">
-                      <span className="text-xs font-medium text-primary">3</span>
                     </div>
                     <div>
                       <p className="text-sm font-medium">Focus on Video Content</p>

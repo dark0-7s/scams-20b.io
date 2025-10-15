@@ -17,7 +17,6 @@ import {
   XCircle,
   Clock,
   Upload,
-  Fingerprint,
   Bluetooth,
   AlertCircle,
   TrendingUp,
@@ -77,7 +76,7 @@ const recentResources = [
 export default function LecturerDashboard() {
   const { user } = useAuth();
   const [selectedClass, setSelectedClass] = useState<any>(null);
-  const [attendanceMode, setAttendanceMode] = useState<'manual' | 'biometric' | 'bluetooth'>('biometric');
+  const [attendanceMode, setAttendanceMode] = useState<'manual' | 'bluetooth'>('bluetooth');
   const [isMarkingAttendance, setIsMarkingAttendance] = useState(false);
 
   const handleMarkAttendance = (classItem: any) => {
@@ -118,9 +117,9 @@ export default function LecturerDashboard() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
           <CardContent className="p-4 text-center">
-            <Fingerprint className="h-8 w-8 mx-auto mb-2 text-primary" />
+            <Bluetooth className="h-8 w-8 mx-auto mb-2 text-primary" />
             <h3 className="font-semibold text-sm">Mark Attendance</h3>
-            <p className="text-xs text-muted-foreground">Biometric verification</p>
+            <p className="text-xs text-muted-foreground">BLE or Manual</p>
           </CardContent>
         </Card>
         
@@ -211,7 +210,7 @@ export default function LecturerDashboard() {
                           onClick={() => handleMarkAttendance(classItem)}
                           disabled={isMarkingAttendance}
                         >
-                          <Fingerprint className="w-4 h-4 mr-2" />
+                          <Bluetooth className="w-4 h-4 mr-2" />
                           Mark Attendance
                         </Button>
                       )}
@@ -256,18 +255,6 @@ export default function LecturerDashboard() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <Fingerprint className="h-5 w-5 text-primary" />
-                      <div>
-                        <Label>Biometric Verification</Label>
-                        <p className="text-xs text-muted-foreground">Fingerprint scanning</p>
-                      </div>
-                    </div>
-                    <Switch checked={attendanceMode === 'biometric'} 
-                            onCheckedChange={() => setAttendanceMode('biometric')} />
-                  </div>
-
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <Bluetooth className="h-5 w-5 text-blue-500" />
@@ -578,12 +565,11 @@ export default function LecturerDashboard() {
             <CardContent className="space-y-4">
               <div className="text-center py-8">
                 <div className="animate-pulse">
-                  <Fingerprint className="h-16 w-16 mx-auto mb-4 text-primary" />
+                  <Bluetooth className="h-16 w-16 mx-auto mb-4 text-primary" />
                 </div>
                 <p className="text-sm font-medium">Scanning for devices...</p>
                 <p className="text-xs text-muted-foreground">
-                  {attendanceMode === 'biometric' ? 'Students can now scan their fingerprints' :
-                   attendanceMode === 'bluetooth' ? 'Detecting Bluetooth devices in range' :
+                  {attendanceMode === 'bluetooth' ? 'Detecting Bluetooth devices in range' :
                    'Manual attendance mode active'}
                 </p>
               </div>

@@ -29,12 +29,12 @@ import type { AttendanceRecord, Session, SessionMode } from "@shared/api";
 
 // Mock attendance data (historical)
 const attendanceRecords = [
-  { date: "2024-01-15", subject: "Data Structures", status: "present", time: "09:15 AM", method: "biometric" },
+  { date: "2024-01-15", subject: "Data Structures", status: "present", time: "09:15 AM", method: "verified" },
   { date: "2024-01-15", subject: "Database Lab", status: "present", time: "02:30 PM", method: "bluetooth" },
-  { date: "2024-01-14", subject: "Algorithms", status: "present", time: "11:05 AM", method: "biometric" },
+  { date: "2024-01-14", subject: "Algorithms", status: "present", time: "11:05 AM", method: "verified" },
   { date: "2024-01-14", subject: "Computer Networks", status: "absent", time: "-", method: "-" },
   { date: "2024-01-13", subject: "Software Engineering", status: "present", time: "10:20 AM", method: "manual" },
-  { date: "2024-01-12", subject: "Data Structures", status: "present", time: "09:12 AM", method: "biometric" }
+  { date: "2024-01-12", subject: "Data Structures", status: "present", time: "09:12 AM", method: "verified" }
 ];
 
 const subjects = ["All Subjects", "Data Structures", "Algorithms", "Database Lab", "Computer Networks", "Software Engineering"];
@@ -154,6 +154,7 @@ export default function Attendance() {
   const getMethodIcon = (method: string) => {
     switch (method) {
       case 'bluetooth': return <Bluetooth className="h-4 w-4 text-green-600" />;
+      case 'verified': return <CheckCircle className="h-4 w-4 text-blue-600" />;
       case 'manual': return <Users className="h-4 w-4 text-gray-600" />;
       default: return null;
     }
@@ -246,7 +247,7 @@ export default function Attendance() {
                     id: String(i+1),
                     sessionId: 'history',
                     userId: user?.id || 'user',
-                    method: (r.method === 'biometric' ? 'ble' : r.method === 'bluetooth' ? 'ble' : 'manual') as any,
+                    method: (r.method === 'bluetooth' ? 'ble' : r.method === 'verified' ? 'verified' : 'manual') as any,
                     timestamp: new Date(r.date + ' ' + (r.time === '-' ? '00:00' : r.time)).getTime(),
                   }));
                   downloadCsv(rows);
