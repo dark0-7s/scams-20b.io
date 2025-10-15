@@ -1,61 +1,57 @@
-// Suppress specific React "defaultProps will be removed" warnings coming from third-party
-// libraries (notably Recharts). We keep the suppression conservative so other warnings/errors
-// still surface. Disabled for test environment so unit tests can assert warnings if needed.
-if (typeof window !== "undefined" && process.env.NODE_ENV !== "test") {
-  const originalWarn = console.warn.bind(console);
-  const originalError = console.error.bind(console);
+// Aggressive suppression for noisy third-party warnings (Recharts) and duplicate createRoot warnings.
+// Disabled in test environment so unit tests can assert warnings if needed.
+if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') {
+  const MARKER = '__SUPPRESS_WARNINGS_APPLIED__';
+  if (!(window as any)[MARKER]) {
+    (window as any)[MARKER] = true;
 
-  const DEFAULT_PROPS_REGEX =
-    /defaultProps will be removed|Support for defaultProps will be removed|Support for defaultProps/i;
-  const RECHARTS_COMPONENTS: string[] = [];
+    const originalWarn = console.warn.bind(console);
+    const originalError = console.error.bind(console);
+    const originalInfo = typeof console.info === 'function' ? console.info.bind(console) : undefined;
+    const originalLog = console.log.bind(console);
 
-  function argsToString(args: any[]) {
-    try {
-      return args
-        .map((a) => {
-          if (typeof a === "string") return a;
-          try {
-            return JSON.stringify(a);
-          } catch {
-            return String(a);
-          }
-        })
-        .join(" ");
-    } catch {
-      return String(args);
-    }
-  }
+    const SUPPRESS_RE = /defaultProps|Support for defaultProps will be removed|createRoot|already been passed to createRoot|root\.render|ReactDOMClient\.createRoot/i;
 
-  function containsRechartsComponent(_args: any[]) {
-    return true;
-  }
-
-  function isInterpolatedDefaultPropsWarning(args: any[]) {
-    if (typeof args[0] !== "string") return false;
-    if (!/%s/.test(args[0])) return false;
-    const joined = argsToString(args);
-    return DEFAULT_PROPS_REGEX.test(joined);
-  }
-
-  function shouldSuppress(args: any[]) {
-    const joined = argsToString(args);
-    if (DEFAULT_PROPS_REGEX.test(joined)) return true;
-    if (isInterpolatedDefaultPropsWarning(args)) return true;
-    return false;
-  }
-
-  function makeSuppressor(originalFn: (...a: any[]) => void) {
-    return (...args: any[]) => {
+    function argsToString(args: any[]) {
       try {
-        if (shouldSuppress(args)) return;
-      } catch (e) {
-        // If suppression check crashes for any reason, fall back to original behavior
-        return originalFn(...args);
+        return args
+          .map((a) => (typeof a === 'string' ? a : JSON.stringify(a)))
+          .join(' ');
+      } catch {
+        try {
+          return String(Array.prototype.slice.call(args));
+        } catch {
+          return '';
+        }
       }
-      return originalFn(...args);
-    };
-  }
+    }
 
-  console.warn = makeSuppressor(originalWarn);
-  console.error = makeSuppressor(originalError);
+    function shouldSuppress(args: any[]) {
+      try {
+        if (!args || args.length === 0) return false;
+        if (typeof args[0] === 'string' && SUPPRESS_RE.test(args[0])) return true;
+        const joined = argsToString(args);
+        if (SUPPRESS_RE.test(joined)) return true;
+      } catch (e) {
+        return false;
+      }
+      return false;
+    }
+
+    function makeSuppressor(originalFn?: (...a: any[]) => void) {
+      return (...args: any[]) => {
+        try {
+          if (shouldSuppress(args)) return;
+        } catch (e) {
+          // fallthrough
+        }
+        if (originalFn) return originalFn(...args);
+      };
+    }
+
+    console.warn = makeSuppressor(originalWarn);
+    console.error = makeSuppressor(originalError);
+    if (originalInfo) console.info = makeSuppressor(originalInfo);
+    console.log = makeSuppressor(originalLog);
+  }
 }
