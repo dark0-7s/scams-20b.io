@@ -35,6 +35,25 @@ import {
 } from "recharts";
 
 // Mock analytics data
+// Student personal analytics (mock)
+const mySubjectSummary = [
+  { subject: 'Data Structures', attended: 22, total: 24 },
+  { subject: 'Algorithms', attended: 18, total: 22 },
+  { subject: 'Computer Networks', attended: 17, total: 24 },
+  { subject: 'Software Engineering', attended: 20, total: 22 },
+];
+const mySessionHistory = [
+  { date: '2025-01-14', subject: 'Algorithms', status: 'present', mode: 'Online', time: '11:05 AM' },
+  { date: '2025-01-15', subject: 'Data Structures', status: 'present', mode: 'On-Campus', time: '09:15 AM' },
+  { date: '2025-01-15', subject: 'Database Lab', status: 'present', mode: 'On-Campus', time: '02:30 PM' },
+  { date: '2025-01-16', subject: 'Computer Networks', status: 'absent', mode: '-', time: '-' },
+];
+const nextSessions = [
+  { when: 'Tomorrow 9:00 AM', subject: 'Data Structures', room: 'A-101' },
+  { when: 'Thu 11:00 AM', subject: 'Algorithms', room: 'A-202' },
+  { when: 'Fri 2:00 PM', subject: 'Computer Networks', room: 'CS-201' },
+];
+
 const attendanceTrends = [
   { month: 'Aug', overall: 82, cs: 84, ece: 80, mech: 83, civil: 81 },
   { month: 'Sep', overall: 85, cs: 87, ece: 83, mech: 86, civil: 84 },
@@ -78,6 +97,9 @@ const resourceEngagement = [
 
 export default function Analytics() {
   const { user } = useAuth();
+  const isStudent = user?.role === 'student';
+  const isLecturer = user?.role === 'lecturer';
+  const isCoordinator = user?.role === 'department_moderator' || user?.role === 'admin';
 
   const getInsightColor = (level: string) => {
     switch (level) {
@@ -88,6 +110,149 @@ export default function Analytics() {
       default: return 'text-gray-600 bg-gray-50';
     }
   };
+
+  if (isStudent) {
+    const perSubject = mySubjectSummary.map(s => ({ subject: s.subject, attendance: Math.round((s.attended / s.total) * 100) }));
+    const overallPct = Math.round((mySubjectSummary.reduce((acc, s) => acc + (s.attended / s.total), 0) / Math.max(1, mySubjectSummary.length)) * 100);
+    const defaulters = perSubject.filter(s => s.attendance < 75);
+
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold">My Analytics</h1>
+            <p className="text-muted-foreground">Your attendance progress and upcoming sessions</p>
+          </div>
+          <div className="flex space-x-2">
+            <Button variant="outline">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh Data
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Overall Attendance</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{overallPct}%</div>
+              <Progress value={overallPct} className="mt-2" />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Subjects Tracked</CardTitle>
+              <BookOpen className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{mySubjectSummary.length}</div>
+              <p className="text-xs text-muted-foreground">Active this term</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">At-Risk Subjects</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-yellow-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{defaulters.length}</div>
+              <p className="text-xs text-muted-foreground">Below 75% attendance</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Next Sessions</CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-1 text-sm">
+                {nextSessions.map((s, i) => (
+                  <div key={i} className="flex justify-between">
+                    <span>{s.subject}</span>
+                    <span className="text-muted-foreground">{s.when}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {defaulters.length > 0 && (
+          <Card className="border-yellow-200 bg-yellow-50">
+            <CardHeader>
+              <CardTitle>Defaulter Warning</CardTitle>
+              <CardDescription>Improve attendance in these subjects</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {defaulters.map((d, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <span className="font-medium">{d.subject}</span>
+                  <Badge variant="outline" className="bg-yellow-100 text-yellow-700">{d.attendance}%</Badge>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Subject-wise Attendance</CardTitle>
+            <CardDescription>Your attendance percentage by subject</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={perSubject}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="subject" angle={-30} textAnchor="end" height={70} />
+                <YAxis domain={[0, 100]} />
+                <Tooltip formatter={(value) => `${value}%`} />
+                <Bar dataKey="attendance" fill="#3b82f6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Session History</CardTitle>
+            <CardDescription>Finalized sessions only</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-3">Date</th>
+                    <th className="text-left p-3">Subject</th>
+                    <th className="text-left p-3">Status</th>
+                    <th className="text-left p-3">Mode</th>
+                    <th className="text-left p-3">Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mySessionHistory.map((r, idx) => (
+                    <tr key={idx} className="border-b hover:bg-muted/50">
+                      <td className="p-3">{new Date(r.date).toLocaleDateString()}</td>
+                      <td className="p-3 font-medium">{r.subject}</td>
+                      <td className="p-3 capitalize">{r.status}</td>
+                      <td className="p-3">{r.mode}</td>
+                      <td className="p-3">{r.time}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -184,11 +349,11 @@ export default function Analytics() {
       </div>
 
       <Tabs defaultValue="trends" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className={`grid w-full ${isLecturer ? 'grid-cols-3' : 'grid-cols-5'}`}>
           <TabsTrigger value="trends">Trends</TabsTrigger>
-          <TabsTrigger value="departments">Departments</TabsTrigger>
+          {!isLecturer && <TabsTrigger value="departments">Departments</TabsTrigger>}
           <TabsTrigger value="subjects">Subjects</TabsTrigger>
-          <TabsTrigger value="engagement">Engagement</TabsTrigger>
+          {!isLecturer && <TabsTrigger value="engagement">Engagement</TabsTrigger>}
           <TabsTrigger value="insights">Insights</TabsTrigger>
         </TabsList>
 
