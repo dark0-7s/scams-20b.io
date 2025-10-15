@@ -28,10 +28,6 @@ export default function Login() {
     }
   };
 
-  const handleFingerprintLogin = () => {
-    // Handle fingerprint login logic
-    console.log("Fingerprint login attempt");
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 flex items-center justify-center p-4">
@@ -97,24 +93,6 @@ export default function Login() {
                 {isLoading ? "Signing in..." : "Login"}
               </Button>
             </form>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Or</span>
-              </div>
-            </div>
-
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handleFingerprintLogin}
-            >
-              <Fingerprint className="mr-2 h-4 w-4" />
-              Login with Fingerprint
-            </Button>
 
             <div className="text-center">
               <Link
