@@ -570,7 +570,6 @@ export default function Attendance() {
                 {scanningStatus === 'scanning' && (
                   <div className="animate-pulse">
                     <div className="relative">
-                      {attendanceMethod === 'biometric' && <Fingerprint className="h-16 w-16 mx-auto mb-4 text-primary" />}
                       {attendanceMethod === 'bluetooth' && <Bluetooth className="h-16 w-16 mx-auto mb-4 text-blue-500" />}
                       {attendanceMethod === 'manual' && <Users className="h-16 w-16 mx-auto mb-4 text-green-500" />}
                       <div className="absolute inset-0 border-2 border-primary rounded-full animate-ping"></div>
